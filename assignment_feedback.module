@@ -8,6 +8,17 @@ function assignment_feedback_menu()
 {
   $items = array();
 
+  /* add feedback */
+  $items['feedback/add'] = array(
+    'title' => 'Submit Assignment Feedback',
+    'description' => 'Submit Assignment Feedback',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('add_feedback_settings_form'),
+    'access arguments' => array('create assignment feedback'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'feedback.inc',
+  );
+
   /* for admin */
   $items['admin/settings/assignment_feedback'] = array(
     'title' => 'Assignment Feedback Settings',
@@ -26,7 +37,21 @@ function assignment_feedback_menu()
  * Implementation of hook_perm().
  */
 function assignment_feedback_perm() {
-  return array('administer assignment feedback');
+  return array('administer assignment feedback', 'create assignment feedback');
 }
 
+/**
+ * Implementation of hook_link().
+ */
+function assignment_feedback_link($type, $object, $teaser = FALSE) {
+  $links = array();
+
+  if (in_array($object->type, variable_get('assignment_feedback_node_types', array()))) {
+    $links['feedback/add'] = array(
+      'title' => 'Submit Your Feedback',
+      'href' => 'feedback/add/' . $object->nid,
+    );
+  }
+  return $links;
+}
 

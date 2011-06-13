@@ -10,6 +10,7 @@ function assignment_feedback_install() {
   variable_set('assignment_feedback_emails', '');
   variable_set('assignment_feedback_from_email', '');
   variable_set('assignment_feedback_upload_extensions', '');
+  variable_set('assignment_feedback_node_types', '');
 }
 
 /**
@@ -22,6 +23,7 @@ function assignment_feedback_uninstall() {
   variable_del('assignment_feedback_emails');
   variable_del('assignment_feedback_from_email');
   variable_del('assignment_feedback_upload_extensions');
+  variable_del('assignment_feedback_node_types');
 }
 
 /**
