@@ -1,0 +1,32 @@
+<?php
+// $Id$
+
+/**
+ * Implementation of hook_menu().
+ */
+function assignment_feedback_menu()
+{
+  $items = array();
+
+  /* for admin */
+  $items['admin/settings/assignment_feedback'] = array(
+    'title' => 'Assignment Feedback Settings',
+    'description' => 'Assignment Feedback Settings', 
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('assignment_feedback_settings_form'),
+    'access arguments' => array('administer assignment feedback'),
+    'type' => MENU_NORMAL_ITEM,
+    'file' => 'settings.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implementation of hook_perm().
+ */
+function assignment_feedback_perm() {
+  return array('administer assignment feedback');
+}
+
+
