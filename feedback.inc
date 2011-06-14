@@ -1,7 +1,7 @@
 <?php
 // $Id$
 
-function add_feedback_settings_form($form_state)
+function add_feedback_form($form_state)
 {
 	global $user;
 
@@ -39,6 +39,7 @@ function add_feedback_settings_form($form_state)
   $form['feedback_where'] = array(
     '#type' => 'radios',
     '#title' => t('Where'),
+    '#default_value' => 1,
     '#options' => _feedback_where(),
     '#required' => TRUE,
   );
@@ -78,7 +79,7 @@ function add_feedback_settings_form($form_state)
   return $form;
 }
 
-function add_feedback_settings_form_validate($form, &$form_state)
+function add_feedback_form_validate($form, &$form_state)
 {
   if ($form_state['values']['feedback_type'] < 1)
     form_set_error('feedback_type', t('Feedback Type field is required.'));
@@ -88,7 +89,7 @@ function add_feedback_settings_form_validate($form, &$form_state)
     form_set_error('completion_time', t('How long did you take to complete the assignment is not a valid time.'));
 }
 
-function add_feedback_settings_form_submit($form, &$form_state)
+function add_feedback_form_submit($form, &$form_state)
 {
 	global $user;
 	$nid = (int)arg(2);

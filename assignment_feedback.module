@@ -13,10 +13,51 @@ function assignment_feedback_menu()
     'title' => 'Submit Assignment Feedback',
     'description' => 'Submit Assignment Feedback',
     'page callback' => 'drupal_get_form',
-    'page arguments' => array('add_feedback_settings_form'),
+    'page arguments' => array('add_feedback_form'),
     'access arguments' => array('create assignment feedback'),
-    'type' => MENU_NORMAL_ITEM,
+    'type' => MENU_CALLBACK,
     'file' => 'feedback.inc',
+  );
+
+  /* manage feedback */
+  $items['feedback/manage'] = array(
+    'title' => 'Manage Feedback',
+    'description' => 'Manage Assignment Feedback',
+    'page callback' => '_pending_feedbacks',
+    'access callback' => 'user_access',
+    'access arguments' => array('manage assignment feedback'),
+    'file' => 'manage_feedback.inc',
+  );
+  $items['feedback/manage/pending'] = array(
+    'title' => 'Pending Feedback',
+    'description' => 'Pending Assignment Feedback',
+    'page callback' => '_pending_feedbacks',
+    'access callback' => 'user_access',
+    'access arguments' => array('manage assignment feedback'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'file' => 'manage_feedback.inc',
+    'weight' => 2,
+  );
+  $items['feedback/manage/all'] = array(
+    'title' => 'All Feedback',
+    'description' => 'All Assignment Feedback',
+    'page callback' => '_all_feedbacks',
+    'access callback' => 'user_access',
+    'access arguments' => array('manage assignment feedback'),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'manage_feedback.inc',
+    'weight' => 3,
+  );
+  $items['feedback/manage/approve'] = array(
+    'title' => 'Manage Assignment Feedback',
+    'description' => 'Manage Assignment Feedback',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('manage_feedback_form'),
+    'access callback' => 'user_access',
+    'access arguments' => array('manage assignment feedback'),
+    'type' => MENU_CALLBACK,
+    'file' => 'manage_feedback.inc',
+    'weight' => 1,
   );
 
   /* for admin */
@@ -37,7 +78,7 @@ function assignment_feedback_menu()
  * Implementation of hook_perm().
  */
 function assignment_feedback_perm() {
-  return array('administer assignment feedback', 'create assignment feedback');
+  return array('administer assignment feedback', 'create assignment feedback', 'manage assignment feedback');
 }
 
 /**
