@@ -55,3 +55,39 @@ function assignment_feedback_link($type, $object, $teaser = FALSE) {
   return $links;
 }
 
+/**
+ * Implementation of hook_mail().
+ */
+function assignment_feedback_mail($key, &$message, $params) {
+  global $user;
+  $language = $message['language'];
+
+  switch ($key)
+  {
+    case 'feedback_received':
+      $user_data = user_load($params['feedback_received']['user_id']);
+
+      $message['subject'] = t('[!site_name] We have received your feedback', array('!site_name' => variable_get('site_name', '')), $language->language);
+      $message['body'] = t('
+Dear !user_name,
+
+We have received your following feedback
+
+Your Email: ' . $user_data->mail . '
+Name of the tutorial: ' . $params['feedback_received']['tutorial_name'] . '
+Feedback Type: ' . $params['feedback_received']['feedback_type'] . '
+Where: ' . $params['feedback_received']['feedback_where'] . '
+Start Time: ' . $params['feedback_received']['timing'] . '
+How long did you take to complete the assignment: ' . $params['feedback_received']['completion_time'] . '
+
+Comment Box :
+' . $params['feedback_received']['comments'] . '
+
+Best Wishes,
+
+!site_name', array('!site_name' => variable_get('site_name', ''), '!user_name' => $user_data->name), $language->language);
+      break;
+  }
+}
+
+

@@ -32,14 +32,14 @@ function add_feedback_settings_form($form_state)
     '#type' => 'select',
     '#title' => t('Feedback Type'),
     '#default_value' => 0,
-    '#options' => array('0' => 'Please select...', '1' => 'Assignment', '2' => 'Feedback', '3' => 'Correction', '4' => 'Question', '5' => 'Suggestions', '6' => 'Others'),
+    '#options' => _feedback_type(),
     '#required' => TRUE,
   );
 
   $form['feedback_where'] = array(
     '#type' => 'radios',
     '#title' => t('Where'),
-    '#options' => array('1' => 'Inbetween Tutorial', '2' => 'End of Tutorial'),
+    '#options' => _feedback_where(),
     '#required' => TRUE,
   );
 
@@ -110,23 +110,54 @@ function add_feedback_settings_form_submit($form, &$form_state)
 						0,
 						time()
 						);
-	drupal_set_message(t('Thank you for your feedback!'), 'status');
-	drupal_goto('node/' . $nid);
 
 	/* sending email */
-	$message['to'] = $user->mail;
-	$message['subject'] = t('Feedback Received');
-	$message['body'] = t('We have received your feedback for ') . $node_data->title;
-	if (variable_get('assignment_feedback_from_email', NULL))
-		$message['headers'] = array('From' => variable_get('assignment_feedback_from_email', NULL));
-
-	if (!drupal_mail_send($message))
+	$email_to = $user->mail;
+	$param['feedback_received']['user_id'] = $user->uid;
+	$param['feedback_received']['tutorial_name'] = $node_data->title;
+	$param['feedback_received']['feedback_type'] = _feedback_type($form_state['values']['feedback_type']); 
+	$param['feedback_received']['feedback_where'] = _feedback_where($form_state['values']['feedback_where']);
+	$param['feedback_received']['timing'] = $form_state['values']['timing'];
+	$param['feedback_received']['completion_time'] = $form_state['values']['completion_time'];
+	$param['feedback_received']['comments'] = $form_state['values']['comments'];
+	if (!drupal_mail('assignment_feedback', 'feedback_received', $email_to, language_default(), $param, variable_get('textbook_companion_from_email', NULL), TRUE))
+		drupal_set_message('Error sending email message.', 'error');
+	$email_to = variable_get('assignment_feedback_emails', NULL);
+	if (!drupal_mail('assignment_feedback', 'feedback_received', $email_to, language_default(), $param, variable_get('textbook_companion_from_email', NULL), TRUE))
 		drupal_set_message('Error sending email message.', 'error');
 
-	if (variable_get('assignment_feedback_emails', NULL)) {
-		$message['to'] = variable_get('assignment_feedback_emails', '');
-		if (!drupal_mail_send($message))
-			drupal_set_message('Error sending email message.', 'error');
+	drupal_set_message(t('Thank you for your feedback!'), 'status');
+	drupal_goto('node/' . $nid);
+}
+
+function _feedback_type($type_id = NULL)
+{
+	if ($type_id) {
+		switch ($type_id) {
+		case 0: return 'Invalid'; break;
+		case 1: return 'Assignment'; break;
+		case 2: return 'Feedback'; break;
+		case 3: return 'Correction'; break;
+		case 4: return 'Question'; break;
+		case 5: return 'Suggestions'; break;
+		case 6: return 'Others'; break;
+		default: return 'Invalid'; break;
+		}
+	} else {
+		return array('0' => 'Please select...', '1' => 'Assignment', '2' => 'Feedback', '3' => 'Correction', '4' => 'Question', '5' => 'Suggestions', '6' => 'Others');
 	}
 }
 
+function _feedback_where($type_id = NULL)
+{
+	if ($type_id) {
+		switch ($type_id) {
+		case 0: return 'Invalid'; break;
+		case 1: return 'Inbetween Tutorial'; break;
+		case 2: return 'End of Tutorial'; break;
+		default: return 'Invalid'; break;
+		}
+	} else {
+		return array('1' => 'Inbetween Tutorial', '2' => 'End of Tutorial');
+	}
+}
