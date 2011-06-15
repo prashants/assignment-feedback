@@ -7,11 +7,12 @@ function manage_feedback_form($form_state)
 
 	$feedback_id = (int)arg(3);
 	$feedback_q = db_query("SELECT * FROM assignment_feedback_submissions WHERE id = %d LIMIT 1", $feedback_id);
-	if (!$feedback_q) {
+	$feedback_data = db_fetch_object($feedback_q);
+	if (!$feedback_data) {
 		drupal_set_message(t('Invalid Feedback'), 'error');
 		drupal_goto('feedback/manage');
+		return;
 	}
-	$feedback_data = db_fetch_object($feedback_q);
 	$user_data = user_load($feedback_data->uid);
 	$node_data = node_load($feedback_data->nid);
 
@@ -90,45 +91,69 @@ function manage_feedback_form($form_state)
 function manage_feedback_form_submit($form, &$form_state)
 {
 	global $user;
-	$nid = (int)arg(2);
-	$node_data = node_load($nid);
-	if (!$node_data) {
-		drupal_set_message(t('Invalid Link'), 'error');
-		drupal_goto('');
+
+	$feedback_id = (int)arg(3);
+	$feedback_q = db_query("SELECT * FROM assignment_feedback_submissions WHERE id = %d LIMIT 1", $feedback_id);
+	$feedback_data = db_fetch_object($feedback_q);
+	if (!$feedback_data) {
+		drupal_set_message(t('Invalid Feedback'), 'error');
+		drupal_goto('feedback/manage');
+		return;
+	}
+	$user_data = user_load($feedback_data->uid);
+	$node_data = node_load($feedback_data->nid);
+
+	/* updating feedback */
+	if ($form_state['values']['status'] == 1) {
+		/* feedback approve */
+		db_query("UPDATE {assignment_feedback_submissions} SET status = %d, approver_uid = %d, approver_timestamp = %d WHERE id = %d", 1, $user->uid, time(), $feedback_id);
+
+		/* sending email */
+		$email_to = $user_data->mail;
+		$param['feedback_approved']['user_id'] = $user_data->uid;
+		$param['feedback_approved']['tutorial_name'] = $node_data->title;
+		$param['feedback_approved']['feedback_type'] = _feedback_type($feedback_data->feedback_type); 
+		$param['feedback_approved']['feedback_where'] = _feedback_where($feedback_data->feedback_where);
+		$param['feedback_approved']['timing'] = $feedback_data->timing;
+		$param['feedback_approved']['completion_time'] = $feedback_data->completion_time;
+		$param['feedback_approved']['comments'] = $feedback_data->comments;
+		if (!drupal_mail('assignment_feedback', 'feedback_approved', $email_to, language_default(), $param, variable_get('textbook_companion_from_email', NULL), TRUE))
+			drupal_set_message('Error sending email message.', 'error');
+		$email_to = variable_get('assignment_feedback_emails', NULL);
+		if (!drupal_mail('assignment_feedback', 'feedback_approved', $email_to, language_default(), $param, variable_get('textbook_companion_from_email', NULL), TRUE))
+			drupal_set_message('Error sending email message.', 'error');
+	
+		drupal_set_message(t('Feedback has been approved and a notification email has been sent to the user.'), 'status');
+	} else if ($form_state['values']['status'] == 2) {
+		/* feedback disapprove */
+		db_query("UPDATE {assignment_feedback_submissions} SET status = %d, approver_uid = %d, approver_timestamp = %d, disapprove_message = '%s' WHERE id = %d", 2, $user->uid, time(), $form_state['values']['message'], $feedback_id);
+
+		/* sending email */
+		$email_to = $user_data->mail;
+		$param['feedback_disapproved']['user_id'] = $user_data->uid;
+		$param['feedback_disapproved']['tutorial_name'] = $node_data->title;
+		$param['feedback_disapproved']['feedback_type'] = _feedback_type($feedback_data->feedback_type); 
+		$param['feedback_disapproved']['feedback_where'] = _feedback_where($feedback_data->feedback_where);
+		$param['feedback_disapproved']['timing'] = $feedback_data->timing;
+		$param['feedback_disapproved']['completion_time'] = $feedback_data->completion_time;
+		$param['feedback_disapproved']['comments'] = $feedback_data->comments;
+		$param['feedback_disapproved']['reason'] = $form_state['values']['message'];
+
+		if (!drupal_mail('assignment_feedback', 'feedback_disapproved', $email_to, language_default(), $param, variable_get('textbook_companion_from_email', NULL), TRUE))
+			drupal_set_message('Error sending email message.', 'error');
+		$email_to = variable_get('assignment_feedback_emails', NULL);
+		if (!drupal_mail('assignment_feedback', 'feedback_disapproved', $email_to, language_default(), $param, variable_get('textbook_companion_from_email', NULL), TRUE))
+			drupal_set_message('Error sending email message.', 'error');
+
+		drupal_set_message(t('Feedback has been disapproved and a notification email has been sent to the user.'), 'status');
 	}
 
-	db_query("INSERT INTO {assignment_feedback_submissions} (uid, nid, feedback_type, feedback_where, timing, completion_time, comments, status, timestamp)
-						VALUES (%d, %d, %d, %d, '%s', %d, '%s', %d, %d)",
-						$user->uid,
-						$nid,
-						$form_state['values']['feedback_type'],
-						$form_state['values']['feedback_where'],
-						$form_state['values']['timing'],
-						$form_state['values']['completion_time'],
-						$form_state['values']['comments'],
-						0,
-						time()
-						);
-
-	/* sending email */
-	$email_to = $user->mail;
-	$param['feedback_received']['user_id'] = $user->uid;
-	$param['feedback_received']['tutorial_name'] = $node_data->title;
-	$param['feedback_received']['feedback_type'] = _feedback_type($form_state['values']['feedback_type']); 
-	$param['feedback_received']['feedback_where'] = _feedback_where($form_state['values']['feedback_where']);
-	$param['feedback_received']['timing'] = $form_state['values']['timing'];
-	$param['feedback_received']['completion_time'] = $form_state['values']['completion_time'];
-	$param['feedback_received']['comments'] = $form_state['values']['comments'];
-	if (!drupal_mail('assignment_feedback', 'feedback_received', $email_to, language_default(), $param, variable_get('textbook_companion_from_email', NULL), TRUE))
-		drupal_set_message('Error sending email message.', 'error');
-	$email_to = variable_get('assignment_feedback_emails', NULL);
-	if (!drupal_mail('assignment_feedback', 'feedback_received', $email_to, language_default(), $param, variable_get('textbook_companion_from_email', NULL), TRUE))
-		drupal_set_message('Error sending email message.', 'error');
-
-	drupal_set_message(t('Thank you for your feedback!'), 'status');
-	drupal_goto('node/' . $nid);
+	drupal_goto('feedback/manage');
 }
 
+/******************************************************************************/
+/******************************* EDIT FEEDBACK ********************************/
+/******************************************************************************/
 
 function edit_feedback_form($form_state)
 {
@@ -136,11 +161,12 @@ function edit_feedback_form($form_state)
 
 	$feedback_id = (int)arg(3);
 	$feedback_q = db_query("SELECT * FROM assignment_feedback_submissions WHERE id = %d LIMIT 1", $feedback_id);
-	if (!$feedback_q) {
+	$feedback_data = db_fetch_object($feedback_q);
+	if (!$feedback_data) {
 		drupal_set_message(t('Invalid Feedback'), 'error');
 		drupal_goto('feedback/manage');
+		return;
 	}
-	$feedback_data = db_fetch_object($feedback_q);
 	$user_data = user_load($feedback_data->uid);
 	$node_data = node_load($feedback_data->nid);
 
@@ -182,7 +208,7 @@ function edit_feedback_form($form_state)
     '#description' => t('Example : 02:40 for 2 minutes 40 seconds from the start of tutorial'),
     '#size' => 5,
     '#maxlength' => 5,
-    '#default_value' => $feedback_data->timming,
+    '#default_value' => $feedback_data->timing,
     '#required' => TRUE,
   );
 
@@ -205,6 +231,11 @@ function edit_feedback_form($form_state)
     '#required' => TRUE,
   );
 
+  $form['delete_feedback'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Delete Feedback'),
+  );
+
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' => t('Submit')
@@ -212,11 +243,53 @@ function edit_feedback_form($form_state)
 
   $form['cancel'] = array(
     '#type' => 'markup',
-    '#value' => l(t('Cancel'), 'manage_proposal'),
+    '#value' => l(t('Cancel'), 'feedback/manage'),
   );
 
   return $form;
 }
+
+function edit_feedback_form_submit($form, &$form_state)
+{
+	global $user;
+
+	$feedback_id = (int)arg(3);
+	$feedback_q = db_query("SELECT * FROM assignment_feedback_submissions WHERE id = %d LIMIT 1", $feedback_id);
+	$feedback_data = db_fetch_object($feedback_q);
+	if (!$feedback_data) {
+		drupal_set_message(t('Invalid Feedback'), 'error');
+		drupal_goto('feedback/manage');
+		return;
+	}
+	$user_data = user_load($feedback_data->uid);
+	$node_data = node_load($feedback_data->nid);
+
+	/* delete feedback */ 
+	if ($form_state['values']['delete_feedback'] == 1) {
+		db_query("DELETE FROM {assignment_feedback_submissions} WHERE id = %d", $feedback_id);
+		drupal_set_message(t('Feedback has been deleted!'), 'status');
+		drupal_goto('feedback/manage');
+		return;
+	}
+
+	/* update feedback */
+	db_query("UPDATE {assignment_feedback_submissions} SET feedback_type = %d, feedback_where = %d, timing = '%s', completion_time = %d, comments = '%s' WHERE id = %d",
+						$form_state['values']['feedback_type'],
+						$form_state['values']['feedback_where'],
+						$form_state['values']['timing'],
+						$form_state['values']['completion_time'],
+						$form_state['values']['comments'],
+						$feedback_id
+						);
+
+	drupal_set_message(t('Feedback has been updated!'), 'status');
+	drupal_goto('feedback/manage');
+	return;
+}
+
+/******************************************************************************/
+/***************************** GENERAL FUNCTIONS ******************************/
+/******************************************************************************/
 
 function _feedback_type($type_id = NULL)
 {
@@ -263,7 +336,7 @@ function _pending_feedbacks()
 				date('d-m-Y', $pending_data->timestamp),
 				l(node_load($pending_data->nid)->title, 'node/' . $pending_data->nid),
 				l(user_load($pending_data->uid)->name, 'user/' . $pending_data->uid),
-				l('Edit', 'feedback/manage/approve/' . $pending_data->id)
+				l('Approve', 'feedback/manage/approve/' . $pending_data->id) . ' | ' . l('Edit', 'feedback/manage/edit/' . $pending_data->id)
 			);
 	}
   $pending_header = array('Date of Submission', 'Name of the Tutorial', 'User Name', 'Action');

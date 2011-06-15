@@ -57,7 +57,18 @@ function assignment_feedback_menu()
     'access arguments' => array('manage assignment feedback'),
     'type' => MENU_CALLBACK,
     'file' => 'manage_feedback.inc',
-    'weight' => 1,
+    'weight' => 4,
+  );
+  $items['feedback/manage/edit'] = array(
+    'title' => 'Edit Assignment Feedback',
+    'description' => 'Edit Assignment Feedback',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('edit_feedback_form'),
+    'access callback' => 'user_access',
+    'access arguments' => array('manage assignment feedback'),
+    'type' => MENU_CALLBACK,
+    'file' => 'manage_feedback.inc',
+    'weight' => 5,
   );
 
   /* for admin */
@@ -112,7 +123,7 @@ function assignment_feedback_mail($key, &$message, $params) {
       $message['body'] = t('
 Dear !user_name,
 
-We have received your following feedback
+We have received your following feedback:
 
 Your Email: ' . $user_data->mail . '
 Name of the tutorial: ' . $params['feedback_received']['tutorial_name'] . '
@@ -123,6 +134,57 @@ How long did you take to complete the assignment: ' . $params['feedback_received
 
 Comment Box :
 ' . $params['feedback_received']['comments'] . '
+
+Best Wishes,
+
+!site_name', array('!site_name' => variable_get('site_name', ''), '!user_name' => $user_data->name), $language->language);
+      break;
+
+    case 'feedback_approved':
+      $user_data = user_load($params['feedback_approved']['user_id']);
+
+      $message['subject'] = t('[!site_name] Your feedback has been approved', array('!site_name' => variable_get('site_name', '')), $language->language);
+      $message['body'] = t('
+Dear !user_name,
+
+We have approved your following feedback:
+
+Your Email: ' . $user_data->mail . '
+Name of the tutorial: ' . $params['feedback_approved']['tutorial_name'] . '
+Feedback Type: ' . $params['feedback_approved']['feedback_type'] . '
+Where: ' . $params['feedback_approved']['feedback_where'] . '
+Start Time: ' . $params['feedback_approved']['timing'] . '
+How long did you take to complete the assignment: ' . $params['feedback_approved']['completion_time'] . '
+
+Comment Box :
+' . $params['feedback_approved']['comments'] . '
+
+Best Wishes,
+
+!site_name', array('!site_name' => variable_get('site_name', ''), '!user_name' => $user_data->name), $language->language);
+      break;
+
+    case 'feedback_disapproved':
+      $user_data = user_load($params['feedback_disapproved']['user_id']);
+
+      $message['subject'] = t('[!site_name] Your feedback has been disapproved', array('!site_name' => variable_get('site_name', '')), $language->language);
+      $message['body'] = t('
+Dear !user_name,
+
+We have disapproved your following feedback:
+
+Your Email: ' . $user_data->mail . '
+Name of the tutorial: ' . $params['feedback_disapproved']['tutorial_name'] . '
+Feedback Type: ' . $params['feedback_disapproved']['feedback_type'] . '
+Where: ' . $params['feedback_disapproved']['feedback_where'] . '
+Start Time: ' . $params['feedback_disapproved']['timing'] . '
+How long did you take to complete the assignment: ' . $params['feedback_disapproved']['completion_time'] . '
+
+Comment Box:
+' . $params['feedback_disapproved']['comments'] . '
+
+Reason for disapproval:
+' . $params['feedback_disapproved']['reason'] . '
 
 Best Wishes,
 

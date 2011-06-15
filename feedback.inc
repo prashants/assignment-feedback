@@ -99,8 +99,8 @@ function add_feedback_form_submit($form, &$form_state)
 		drupal_goto('');
 	}
 
-	db_query("INSERT INTO {assignment_feedback_submissions} (uid, nid, feedback_type, feedback_where, timing, completion_time, comments, status, timestamp)
-						VALUES (%d, %d, %d, %d, '%s', %d, '%s', %d, %d)",
+	db_query("INSERT INTO {assignment_feedback_submissions} (uid, nid, feedback_type, feedback_where, timing, completion_time, comments, status, timestamp, approver_uid, approver_timestamp)
+						VALUES (%d, %d, %d, %d, '%s', %d, '%s', %d, %d, %d, %d)",
 						$user->uid,
 						$nid,
 						$form_state['values']['feedback_type'],
@@ -108,6 +108,8 @@ function add_feedback_form_submit($form, &$form_state)
 						$form_state['values']['timing'],
 						$form_state['values']['completion_time'],
 						$form_state['values']['comments'],
+						0,
+						time(),
 						0,
 						time()
 						);
