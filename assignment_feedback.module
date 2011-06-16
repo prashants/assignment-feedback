@@ -41,7 +41,8 @@ function assignment_feedback_menu()
   $items['feedback/manage/all'] = array(
     'title' => 'All Feedback',
     'description' => 'All Assignment Feedback',
-    'page callback' => '_all_feedbacks',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('all_feedbacks_form'),
     'access callback' => 'user_access',
     'access arguments' => array('manage assignment feedback'),
     'type' => MENU_LOCAL_TASK,

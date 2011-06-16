@@ -344,7 +344,58 @@ function _pending_feedbacks()
   return $output; 
 }
 
-function _all_feedbacks()
+function all_feedbacks_form($form_state)
 {
-	return '';
+  $form['feedback_type'] = array(
+    '#type' => 'radios',
+    '#title' => t('Feedback Type'),
+    '#options' => array(3 => 'All', 0 => 'Pending', 1 => 'Approved', 2 => 'Disapproved'),
+    '#default_value' => 3,
+  );
+
+  $form['from'] = array(
+    '#type' => 'textfield',
+    '#title' => t('From Date'),
+    '#size' => 10,
+  );
+
+  $form['to'] = array(
+    '#type' => 'textfield',
+    '#title' => t('To Date'),
+    '#size' => 10,
+  );
+
+  $form['approver'] = array(
+    '#type' => 'select',
+    '#title' => t('Approver'),
+    '#options' => _all_users(),
+  );
+
+  $form['username'] = array(
+    '#type' => 'select',
+    '#title' => t('Username'),
+    '#options' => _all_users(),
+  );
+
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Show'),
+  );
+
+  $form['results'] = array(
+    '#type' => 'item',
+    '#value' => _pending_feedbacks(),
+  );
+
+  return $form;
+}
+
+function _all_users()
+{
+	$user_q = db_query("SELECT * FROM {users} ORDER BY name ASC");
+	while ($user_data = db_fetch_object($user_q)) {
+		$user_rows[$user_data->uid] = $user_data->name;
+	}
+	$user_rows[0] = 'All';
+	return $user_rows;
 }
