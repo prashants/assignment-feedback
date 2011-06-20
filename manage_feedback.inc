@@ -53,9 +53,10 @@ function manage_feedback_form($form_state)
   );
 
   $form['comments'] = array(
-    '#type' => 'item',
+    '#type' => 'textarea',
     '#title' => t('Comment Box'),
     '#value' => $feedback_data->comments,
+    '#disabled' => TRUE,
   );
 
   $form['status'] = array(
@@ -323,6 +324,20 @@ function _feedback_where($type_id = NULL)
 	}
 }
 
+function _feedback_status($status_id)
+{
+	switch ($status_id) {
+	case 0: return 'Pending'; break;
+	case 1: return 'Approved'; break;
+	case 2: return 'Disapproved'; break;
+	default: return 'Invalid'; break;
+	}
+}
+
+/******************************************************************************/
+/***************************** LIST OF FEEDBACK *******************************/
+/******************************************************************************/
+
 function _pending_feedbacks()
 {
 	$pending_q = db_query("SELECT * FROM {assignment_feedback_submissions} WHERE status = 0 ORDER BY id DESC");
@@ -346,23 +361,34 @@ function _pending_feedbacks()
 
 function all_feedbacks_form($form_state)
 {
+	$form['#redirect'] = FALSE;
+
+  $form['feedback_status'] = array(
+    '#type' => 'radios',
+    '#title' => t('Feedback Status'),
+    '#options' => array('-1' => 'All', '0' => 'Pending', '1' => 'Approved', '2' => 'Disapproved'),
+    '#default_value' => -1,
+  );
+
   $form['feedback_type'] = array(
     '#type' => 'radios',
     '#title' => t('Feedback Type'),
-    '#options' => array(3 => 'All', 0 => 'Pending', 1 => 'Approved', 2 => 'Disapproved'),
-    '#default_value' => 3,
+    '#options' => array('0' => 'All', '1' => 'Assignment', '2' => 'Feedback', '3' => 'Correction', '4' => 'Question', '5' => 'Suggestions', '6' => 'Others'),
+    '#default_value' => 0,
   );
 
   $form['from'] = array(
     '#type' => 'textfield',
     '#title' => t('From Date'),
     '#size' => 10,
+    '#description' => t('Format: DD-MM-YYYY'),
   );
 
   $form['to'] = array(
     '#type' => 'textfield',
     '#title' => t('To Date'),
     '#size' => 10,
+    '#description' => t('Format: DD-MM-YYYY'),
   );
 
   $form['approver'] = array(
@@ -379,13 +405,57 @@ function all_feedbacks_form($form_state)
 
   $form['submit'] = array(
     '#type' => 'submit',
-    '#value' => t('Show'),
+    '#value' => t('Search'),
   );
 
-  $form['results'] = array(
-    '#type' => 'item',
-    '#value' => _pending_feedbacks(),
-  );
+  if ($_POST) {
+  	$query_str = '';
+
+		if ($_POST['feedback_status'] >= 0)
+  			$query_str .= " AND status = " . $_POST['feedback_status'];
+
+  		if ($_POST['from'])
+  		$query_str .= " AND timestamp >= " . _to_timestamp($_POST['from'], 'F') . " ";
+
+  	if ($_POST['to'])
+  		$query_str .= " AND timestamp <= " . _to_timestamp($_POST['to'], 'T') . " ";
+
+  	if ($_POST['approver']) {
+  		if ($_POST['approver'] > 0)
+  			$query_str .= " AND approver_uid = " . $_POST['approver'] . " ";
+  	}
+
+  	if ($_POST['username']) {
+  		if ($_POST['username'] > 0)
+  			$query_str .= " AND uid = " . $_POST['username'] . " ";
+  	}
+
+  	if ($_POST['feedback_type']) {
+  		if ($_POST['feedback_type'] > 0)
+  			$query_str .= " AND feedback_type = " . $_POST['feedback_type'] . " ";
+  	}
+
+  	$query_str = "SELECT * FROM {assignment_feedback_submissions} WHERE 1 " . $query_str . " ORDER BY timestamp DESC";
+  	drupal_set_message($query_str);
+  	$search_q = db_query($query_str);
+  	$output = '';
+  	while ($search_data = db_fetch_object($search_q)) {
+  		$search_rows[] = array(
+				date('d-m-Y G:i', $search_data->timestamp),
+				l(node_load($search_data->nid)->title, 'node/' . $search_data->nid),
+				l(user_load($search_data->uid)->name, 'user/' . $search_data->uid),
+				($search_data->approver_uid) ? l(user_load($search_data->approver_uid)->name, 'user/' . $search_data->approver_uid) : '-',
+				_feedback_status($search_data->status),
+				l('Approve', 'feedback/manage/approve/' . $search_data->id) . ' | ' . l('Edit', 'feedback/manage/edit/' . $search_data->id)
+			);
+			$search_header = array('Date of Submission', 'Name of the Tutorial', 'User Name', 'Approver', 'Status', 'Action');
+			$output = theme_table($search_header, $search_rows);
+  	}
+		$form['results'] = array(
+			'#type' => 'item',
+			'#value' => $output,
+		);
+	}
 
   return $form;
 }
@@ -398,4 +468,13 @@ function _all_users()
 	}
 	$user_rows[0] = 'All';
 	return $user_rows;
+}
+
+function _to_timestamp($str, $from_to)
+{
+	$timearr = explode('-', $str);
+	if ($from_to == 'F')
+		return mktime(0, 0, 0, $timearr[1], $timearr[0], $timearr[2]);
+	else
+		return mktime(23, 59, 59, $timearr[1], $timearr[0], $timearr[2]);
 }
