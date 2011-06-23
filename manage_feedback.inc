@@ -315,12 +315,13 @@ function _feedback_where($type_id = NULL)
 	if ($type_id) {
 		switch ($type_id) {
 		case 0: return 'Invalid'; break;
-		case 1: return 'Inbetween Tutorial'; break;
-		case 2: return 'End of Tutorial'; break;
+		case 1: return 'General'; break;
+		case 2: return 'Inbetween Tutorial'; break;
+		case 3: return 'End of Tutorial'; break;
 		default: return 'Invalid'; break;
 		}
 	} else {
-		return array('1' => 'Inbetween Tutorial', '2' => 'End of Tutorial');
+		return array('1' => 'General', '2' => 'Inbetween Tutorial', '3' => 'End of Tutorial');
 	}
 }
 
@@ -436,7 +437,7 @@ function all_feedbacks_form($form_state)
   	}
 
   	$query_str = "SELECT * FROM {assignment_feedback_submissions} WHERE 1 " . $query_str . " ORDER BY timestamp DESC";
-  	drupal_set_message($query_str);
+  	drupal_set_message($query_str, 'status');
   	$search_q = db_query($query_str);
   	$output = '';
   	while ($search_data = db_fetch_object($search_q)) {

@@ -11,7 +11,55 @@ function add_feedback_form($form_state)
 		drupal_set_message(t('Invalid Link'), 'error');
 		drupal_goto('');
 	}
-	
+
+  /* add javascript for automatic book title, check if example uploaded, dependency selection effects */
+  $assignment_js = " $(document).ready(function() {
+  	var curWhere;
+    $('#edit-feedback-type').change(function() {
+    	var curType = $('#edit-feedback-type').val();
+      if (curType == '1') {
+      		$('#edit-completion-time-wrapper').show();
+      	} else {
+      		$('#edit-completion-time-wrapper').hide();
+      	}
+    });
+
+    $('#edit-feedback-where-1').change(function() {
+    	curWhere = $('#edit-feedback-where-1').val();
+      if (curWhere == '1') {
+      	$('#edit-timing-wrapper').hide();
+      }
+    });
+    $('#edit-feedback-where-2').change(function() {
+    	curWhere = $('#edit-feedback-where-2').val();
+      if (curWhere == '2') {
+      	$('#edit-timing-wrapper').show();
+      }
+    });
+    $('#edit-feedback-where-3').change(function() {
+    	curWhere = $('#edit-feedback-where-3').val();
+      if (curWhere == '3') {
+      	$('#edit-timing-wrapper').show();
+      }
+    });
+
+		curWhere = $('#edit-feedback-where-1:checked').val();
+		if (curWhere == '1') {
+			$('#edit-timing-wrapper').hide();
+		}
+		curWhere = $('#edit-feedback-where-2:checked').val();
+		if (curWhere == '2') {
+			$('#edit-timing-wrapper').show();
+		}
+		curWhere = $('#edit-feedback-where-3:checked').val();
+		if (curWhere == '3') {
+			$('#edit-timing-wrapper').show();
+		}
+
+    $('#edit-feedback-type').trigger('change');
+  });";
+  drupal_add_js($assignment_js, 'inline', 'header');
+
   $form['name'] = array(
     '#type' => 'textfield',
     '#title' => t('Your username'),
@@ -51,7 +99,6 @@ function add_feedback_form($form_state)
     '#size' => 5,
     '#maxlength' => 5,
     '#default_value' => '00:00',
-    '#required' => TRUE,
   );
 
   $form['completion_time'] = array(
@@ -60,7 +107,6 @@ function add_feedback_form($form_state)
     '#size' => 2,
     '#maxlength' => 2,
     '#field_suffix' => 'minutes',
-    '#required' => TRUE,
   );
 
   $form['comments'] = array(
@@ -81,6 +127,55 @@ function add_feedback_form($form_state)
 
 function add_feedback_form_validate($form, &$form_state)
 {
+
+  /* add javascript for automatic book title, check if example uploaded, dependency selection effects */
+  $assignment_js = " $(document).ready(function() {
+  	var curWhere;
+    $('#edit-feedback-type').change(function() {
+    	var curType = $('#edit-feedback-type').val();
+      if (curType == '1') {
+      		$('#edit-completion-time-wrapper').show();
+      	} else {
+      		$('#edit-completion-time-wrapper').hide();
+      	}
+    });
+
+    $('#edit-feedback-where-1').change(function() {
+    	curWhere = $('#edit-feedback-where-1').val();
+      if (curWhere == '1') {
+      	$('#edit-timing-wrapper').hide();
+      }
+    });
+    $('#edit-feedback-where-2').change(function() {
+    	curWhere = $('#edit-feedback-where-2').val();
+      if (curWhere == '2') {
+      	$('#edit-timing-wrapper').show();
+      }
+    });
+    $('#edit-feedback-where-3').change(function() {
+    	curWhere = $('#edit-feedback-where-3').val();
+      if (curWhere == '3') {
+      	$('#edit-timing-wrapper').show();
+      }
+    });
+
+		curWhere = $('#edit-feedback-where-1:checked').val();
+		if (curWhere == '1') {
+			$('#edit-timing-wrapper').hide();
+		}
+		curWhere = $('#edit-feedback-where-2:checked').val();
+		if (curWhere == '2') {
+			$('#edit-timing-wrapper').show();
+		}
+		curWhere = $('#edit-feedback-where-3:checked').val();
+		if (curWhere == '3') {
+			$('#edit-timing-wrapper').show();
+		}
+
+    $('#edit-feedback-type').trigger('change');
+  });";
+  drupal_add_js($assignment_js, 'inline', 'header');
+
   if ($form_state['values']['feedback_type'] < 1)
     form_set_error('feedback_type', t('Feedback Type field is required.'));
   if (!preg_match('/^[0-9][0-9]:[0-9][0-9]$/', $form_state['values']['timing']))
@@ -156,11 +251,12 @@ function _feedback_where($type_id = NULL)
 	if ($type_id) {
 		switch ($type_id) {
 		case 0: return 'Invalid'; break;
-		case 1: return 'Inbetween Tutorial'; break;
-		case 2: return 'End of Tutorial'; break;
+		case 1: return 'General'; break;
+		case 2: return 'Inbetween Tutorial'; break;
+		case 3: return 'End of Tutorial'; break;
 		default: return 'Invalid'; break;
 		}
 	} else {
-		return array('1' => 'Inbetween Tutorial', '2' => 'End of Tutorial');
+		return array('1' => 'General', '2' => 'Inbetween Tutorial', '3' => 'End of Tutorial');
 	}
 }
