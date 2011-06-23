@@ -60,6 +60,8 @@ function add_feedback_form($form_state)
   });";
   drupal_add_js($assignment_js, 'inline', 'header');
 
+  $form['#attributes'] = array('enctype' => "multipart/form-data");
+
   $form['name'] = array(
     '#type' => 'textfield',
     '#title' => t('Your username'),
@@ -115,6 +117,27 @@ function add_feedback_form($form_state)
     '#description' => t('Enter your comments, questions or suggestions here'),
     '#rows' => 12,
     '#required' => TRUE,
+  );
+
+  $form['attach1'] = array(
+    '#type' => 'file',
+    '#title' => t('Attachment 1'),
+    '#description' => t('Separate filenames with underscore. No spaces or any special characters allowed in filename.') . '<br />' .
+    	t('Allowed file extensions : ') . variable_get('assignment_feedback_upload_extensions', ''),
+  );
+
+  $form['attach2'] = array(
+    '#type' => 'file',
+    '#title' => t('Attachment 2'),
+    '#description' => t('Separate filenames with underscore. No spaces or any special characters allowed in filename.') . '<br />' .
+    	t('Allowed file extensions : ') . variable_get('assignment_feedback_upload_extensions', ''),
+  );
+
+  $form['attach3'] = array(
+    '#type' => 'file',
+    '#title' => t('Attachment 3'),
+    '#description' => t('Separate filenames with underscore. No spaces or any special characters allowed in filename.') . '<br />' .
+    	t('Allowed file extensions : ') . variable_get('assignment_feedback_upload_extensions', ''),
   );
 
   $form['submit'] = array(
@@ -180,13 +203,35 @@ function add_feedback_form_validate($form, &$form_state)
     form_set_error('feedback_type', t('Feedback Type field is required.'));
   if (!preg_match('/^[0-9][0-9]:[0-9][0-9]$/', $form_state['values']['timing']))
     form_set_error('timing', t('Start Time is not in a valid format (eg: 00:00).'));
-  if (!preg_match('/^\d+$/', $form_state['values']['completion_time']))
-    form_set_error('completion_time', t('How long did you take to complete the assignment is not a valid time.'));
+  if ($form_state['values']['completion_time'])
+  	if (!preg_match('/^\d+$/', $form_state['values']['completion_time']))
+    	form_set_error('completion_time', t('How long did you take to complete the assignment is not a valid time.'));
+
+    /* check for valid filename extensions */  
+    foreach ($_FILES['files']['name'] as $file_form_name => $file_name)
+    {
+      if ($file_name)
+      {
+        $allowed_extensions = explode(',' , variable_get('assignment_feedback_upload_extensions', ''));
+        $temp_extension = end(explode('.', strtolower($_FILES['files']['name'][$file_form_name])));
+        if (!in_array($temp_extension, $allowed_extensions))
+          form_set_error($file_form_name, t('Only file with ' . variable_get('assignment_feedback_upload_extensions', '') . ' extensions can be uploaded.'));
+        if ($_FILES['files']['size'][$file_form_name] <= 0)
+          form_set_error($file_form_name, t('File size cannot be zero.'));
+
+        /* check if valid file name */
+        if (!_check_valid_filename($_FILES['files']['name'][$file_form_name]))
+         form_set_error($file_form_name, t('Invalid file name specified. Only alphabets, numbers and underscore is allowed as a valid filename.'));
+      }
+    }
 }
 
 function add_feedback_form_submit($form, &$form_state)
 {
 	global $user;
+  $root_path = _root_path();
+  $folder_path =  'sites/default/files/assignment/';
+
 	$nid = (int)arg(2);
 	$node_data = node_load($nid);
 	if (!$node_data) {
@@ -209,6 +254,39 @@ function add_feedback_form_submit($form, &$form_state)
 						time()
 						);
 
+	$submission_id = db_last_insert_id('assignment_feedback_submissions', 'id');
+
+  /* uploading files */
+  foreach ($_FILES['files']['name'] as $file_form_name => $file_name)
+  {
+    if ($file_name)
+    {
+    	$upload_filename = $_FILES['files']['name'][$file_form_name];
+    	$counter = 1;
+      while (file_exists($root_path . $folder_path . $upload_filename)) {
+      	$upload_filename = $counter . $_FILES['files']['name'][$file_form_name];
+      	$counter++;
+      }
+
+      /* uploading file */
+      if (move_uploaded_file($_FILES['files']['tmp_name'][$file_form_name], $root_path . $folder_path . $upload_filename))
+      {
+        /* for uploaded files making an entry in the database */
+        db_query("INSERT INTO {assignment_feedback_attachments} (submission_id, filename, filepath, filemime, filesize, timestamp)
+          VALUES (%d, '%s', '%s', '%s', %d, %d)",
+          $submission_id,
+          $upload_filename,
+          $folder_path . $upload_filename,
+          $_FILES['files']['type'][$file_form_name],
+          $_FILES['files']['size'][$file_form_name],
+          time()
+          );
+      } else {
+        drupal_set_message('Error uploading file : ' . $_FILES['files']['name'][$file_form_name], 'error');
+      }
+    }
+  }
+
 	/* sending email */
 	$email_to = $user->mail;
 	$param['feedback_received']['user_id'] = $user->uid;
@@ -228,35 +306,3 @@ function add_feedback_form_submit($form, &$form_state)
 	drupal_goto('node/' . $nid);
 }
 
-function _feedback_type($type_id = NULL)
-{
-	if ($type_id) {
-		switch ($type_id) {
-		case 0: return 'Invalid'; break;
-		case 1: return 'Assignment'; break;
-		case 2: return 'Feedback'; break;
-		case 3: return 'Correction'; break;
-		case 4: return 'Question'; break;
-		case 5: return 'Suggestions'; break;
-		case 6: return 'Others'; break;
-		default: return 'Invalid'; break;
-		}
-	} else {
-		return array('0' => 'Please select...', '1' => 'Assignment', '2' => 'Feedback', '3' => 'Correction', '4' => 'Question', '5' => 'Suggestions', '6' => 'Others');
-	}
-}
-
-function _feedback_where($type_id = NULL)
-{
-	if ($type_id) {
-		switch ($type_id) {
-		case 0: return 'Invalid'; break;
-		case 1: return 'General'; break;
-		case 2: return 'Inbetween Tutorial'; break;
-		case 3: return 'End of Tutorial'; break;
-		default: return 'Invalid'; break;
-		}
-	} else {
-		return array('1' => 'General', '2' => 'Inbetween Tutorial', '3' => 'End of Tutorial');
-	}
-}

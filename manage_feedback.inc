@@ -59,6 +59,30 @@ function manage_feedback_form($form_state)
     '#disabled' => TRUE,
   );
 
+  /* file attachments */
+  $attachment_q = db_query("SELECT * FROM {assignment_feedback_attachments} WHERE submission_id = %d", $feedback_id);
+  if ($attach1_data = db_fetch_object($attachment_q)) {
+		$form['attach1'] = array(
+			'#type' => 'item',
+			'#title' => t('Attachment 1'),
+			'#value' => l($attach1_data->filename, $attach1_data->filepath),
+		);
+		if ($attach2_data = db_fetch_object($attachment_q)) {
+			$form['attach2'] = array(
+				'#type' => 'item',
+				'#title' => t('Attachment 2'),
+				'#value' => l($attach2_data->filename, $attach2_data->filepath),
+			);
+			if ($attach3_data = db_fetch_object($attachment_q)) {
+				$form['attach3'] = array(
+					'#type' => 'item',
+					'#title' => t('Attachment 2'),
+					'#value' => l($attach3_data->filename, $attach3_data->filepath),
+				);
+			}
+		}
+	}
+
   $form['status'] = array(
     '#type' => 'radios',
     '#title' => t('Approval Status'),
@@ -232,6 +256,30 @@ function edit_feedback_form($form_state)
     '#required' => TRUE,
   );
 
+  /* file attachments */
+  $attachment_q = db_query("SELECT * FROM {assignment_feedback_attachments} WHERE submission_id = %d", $feedback_id);
+  if ($attach1_data = db_fetch_object($attachment_q)) {
+		$form['attach1'] = array(
+			'#type' => 'item',
+			'#title' => t('Attachment 1'),
+			'#value' => l($attach1_data->filename, $attach1_data->filepath),
+		);
+		if ($attach2_data = db_fetch_object($attachment_q)) {
+			$form['attach2'] = array(
+				'#type' => 'item',
+				'#title' => t('Attachment 2'),
+				'#value' => l($attach2_data->filename, $attach2_data->filepath),
+			);
+			if ($attach3_data = db_fetch_object($attachment_q)) {
+				$form['attach3'] = array(
+					'#type' => 'item',
+					'#title' => t('Attachment 2'),
+					'#value' => l($attach3_data->filename, $attach3_data->filepath),
+				);
+			}
+		}
+	}
+
   $form['delete_feedback'] = array(
     '#type' => 'checkbox',
     '#title' => t('Delete Feedback'),
@@ -253,6 +301,8 @@ function edit_feedback_form($form_state)
 function edit_feedback_form_submit($form, &$form_state)
 {
 	global $user;
+  $root_path = _root_path();
+  $folder_path =  'sites/default/files/assignment/';
 
 	$feedback_id = (int)arg(3);
 	$feedback_q = db_query("SELECT * FROM assignment_feedback_submissions WHERE id = %d LIMIT 1", $feedback_id);
@@ -265,8 +315,37 @@ function edit_feedback_form_submit($form, &$form_state)
 	$user_data = user_load($feedback_data->uid);
 	$node_data = node_load($feedback_data->nid);
 
-	/* delete feedback */ 
+	/* delete feedback option selected */ 
 	if ($form_state['values']['delete_feedback'] == 1) {
+
+		/* delete attachments */
+		$status = TRUE;
+		$attachment_q = db_query("SELECT * FROM {assignment_feedback_attachments} WHERE submission_id = %d", $feedback_id);
+		while ($attachment_data = db_fetch_object($attachment_q))
+		{
+			if (!file_exists($root_path . $attachment_data->filepath))
+			{
+				drupal_set_message('Error deleting file :' . $attachment_data->filepath . '. File does not exists.', 'error');
+				continue;
+			}
+
+			/* removing file */
+			if (!unlink($root_path . $attachment_data->filepath))
+			{
+				drupal_set_message('Error deleting file:' . $attachment_data->filepath, 'error');
+				$status = FALSE;
+			} else {
+				/* deleting example files database entries */
+				db_query("DELETE FROM {assignment_feedback_attachments} WHERE id = %d", $attachment_data->id);
+			}
+		}
+		if (!$status) {
+			drupal_set_message(t('Feedback cannot be deleted!'), 'error');
+			drupal_goto('feedback/manage');
+			return;
+		}
+
+		/* delete feedback */
 		db_query("DELETE FROM {assignment_feedback_submissions} WHERE id = %d", $feedback_id);
 		drupal_set_message(t('Feedback has been deleted!'), 'status');
 		drupal_goto('feedback/manage');
@@ -286,53 +365,6 @@ function edit_feedback_form_submit($form, &$form_state)
 	drupal_set_message(t('Feedback has been updated!'), 'status');
 	drupal_goto('feedback/manage');
 	return;
-}
-
-/******************************************************************************/
-/***************************** GENERAL FUNCTIONS ******************************/
-/******************************************************************************/
-
-function _feedback_type($type_id = NULL)
-{
-	if ($type_id) {
-		switch ($type_id) {
-		case 0: return 'Invalid'; break;
-		case 1: return 'Assignment'; break;
-		case 2: return 'Feedback'; break;
-		case 3: return 'Correction'; break;
-		case 4: return 'Question'; break;
-		case 5: return 'Suggestions'; break;
-		case 6: return 'Others'; break;
-		default: return 'Invalid'; break;
-		}
-	} else {
-		return array('0' => 'Please select...', '1' => 'Assignment', '2' => 'Feedback', '3' => 'Correction', '4' => 'Question', '5' => 'Suggestions', '6' => 'Others');
-	}
-}
-
-function _feedback_where($type_id = NULL)
-{
-	if ($type_id) {
-		switch ($type_id) {
-		case 0: return 'Invalid'; break;
-		case 1: return 'General'; break;
-		case 2: return 'Inbetween Tutorial'; break;
-		case 3: return 'End of Tutorial'; break;
-		default: return 'Invalid'; break;
-		}
-	} else {
-		return array('1' => 'General', '2' => 'Inbetween Tutorial', '3' => 'End of Tutorial');
-	}
-}
-
-function _feedback_status($status_id)
-{
-	switch ($status_id) {
-	case 0: return 'Pending'; break;
-	case 1: return 'Approved'; break;
-	case 2: return 'Disapproved'; break;
-	default: return 'Invalid'; break;
-	}
 }
 
 /******************************************************************************/

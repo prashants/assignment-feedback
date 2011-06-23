@@ -10,7 +10,12 @@ function assignment_feedback_install() {
   variable_set('assignment_feedback_emails', '');
   variable_set('assignment_feedback_from_email', '');
   variable_set('assignment_feedback_upload_extensions', '');
-  variable_set('assignment_feedback_node_types', '');
+  variable_set('assignment_feedback_node_types', array());
+  /* creating upload folder */
+  $upload_dir = $_SERVER['DOCUMENT_ROOT'] . base_path() . 'sites/default/files/assignment/';
+  if (!is_dir($upload_dir)) {
+  	mkdir($upload_dir);
+  }
 }
 
 /**
