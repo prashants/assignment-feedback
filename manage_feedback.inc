@@ -478,10 +478,11 @@ function all_feedbacks_form($form_state)
 				l(node_load($search_data->nid)->title, 'node/' . $search_data->nid),
 				l(user_load($search_data->uid)->name, 'user/' . $search_data->uid),
 				($search_data->approver_uid) ? l(user_load($search_data->approver_uid)->name, 'user/' . $search_data->approver_uid) : '-',
+				_feedback_type($search_data->feedback_type),
 				_feedback_status($search_data->status),
 				l('Approve', 'feedback/manage/approve/' . $search_data->id) . ' | ' . l('Edit', 'feedback/manage/edit/' . $search_data->id)
 			);
-			$search_header = array('Date of Submission', 'Name of the Tutorial', 'User Name', 'Approver', 'Status', 'Action');
+			$search_header = array('Date of Submission', 'Name of the Tutorial', 'User Name', 'Approver', 'Type', 'Status', 'Action');
 			$output = theme_table($search_header, $search_rows);
   	}
 		$form['results'] = array(
