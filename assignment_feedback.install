@@ -49,17 +49,22 @@ function assignment_feedback_schema() {
 				'type' => 'int',
 				'not null' => TRUE,
 			),
+			'approver_uid' => array(
+				'description' => t('TODO: please describe this field!'),
+				'type' => 'int',
+				'not null' => TRUE,
+			),
 			'nid' => array(
 				'description' => t('TODO: please describe this field!'),
 				'type' => 'int',
 				'not null' => TRUE,
 			),
-			'type' => array(
+			'feedback_type' => array(
 				'description' => t('TODO: please describe this field!'),
 				'type' => 'int',
 				'not null' => TRUE,
 			),
-			'where' => array(
+			'feedback_where' => array(
 				'description' => t('TODO: please describe this field!'),
 				'type' => 'int',
 				'not null' => TRUE,
@@ -79,6 +84,22 @@ function assignment_feedback_schema() {
 				'description' => t('TODO: please describe this field!'),
 				'type' => 'text',
 				'size' => 'medium',
+				'not null' => TRUE,
+			),
+			'status' => array(
+				'description' => t('TODO: please describe this field!'),
+				'type' => 'int',
+				'not null' => TRUE,
+			),
+			'disapprove_message' => array(
+				'description' => t('TODO: please describe this field!'),
+				'type' => 'text',
+				'size' => 'medium',
+				'not null' => TRUE,
+			),
+			'approver_timestamp' => array(
+				'description' => t('TODO: please describe this field!'),
+				'type' => 'int',
 				'not null' => TRUE,
 			),
 			'timestamp' => array(

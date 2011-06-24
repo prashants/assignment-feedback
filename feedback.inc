@@ -239,14 +239,25 @@ function add_feedback_form_submit($form, &$form_state)
 		drupal_goto('');
 	}
 
+	$timing = $form_state['values']['timing'];
+	$completion_time = $form_state['values']['completion_time'];
+
+	if ($form_state['values']['feedback_where'] == 1) {
+		$timing = "00:00";
+	}
+
+	if ($form_state['values']['feedback_type'] != 1) {
+		$completion_time = 0;
+	}
+
 	db_query("INSERT INTO {assignment_feedback_submissions} (uid, nid, feedback_type, feedback_where, timing, completion_time, comments, status, timestamp, approver_uid, approver_timestamp)
 						VALUES (%d, %d, %d, %d, '%s', %d, '%s', %d, %d, %d, %d)",
 						$user->uid,
 						$nid,
 						$form_state['values']['feedback_type'],
 						$form_state['values']['feedback_where'],
-						$form_state['values']['timing'],
-						$form_state['values']['completion_time'],
+						$timing,
+						$completion_time,
 						$form_state['values']['comments'],
 						0,
 						time(),

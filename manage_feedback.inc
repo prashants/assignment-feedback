@@ -1,6 +1,10 @@
 <?php
 // $Id$
 
+/******************************************************************************/
+/***************************** MANAGE FEEDBACK ********************************/
+/******************************************************************************/
+
 function manage_feedback_form($form_state)
 {
 	global $user;
@@ -148,7 +152,7 @@ function manage_feedback_form_submit($form, &$form_state)
 		if (!drupal_mail('assignment_feedback', 'feedback_approved', $email_to, language_default(), $param, variable_get('textbook_companion_from_email', NULL), TRUE))
 			drupal_set_message('Error sending email message.', 'error');
 	
-		drupal_set_message(t('Feedback has been approved and a notification email has been sent to the user.'), 'status');
+		drupal_set_message(t('Feedback No. ' . $feedback_id . ' has been approved and a notification email has been sent to the user.'), 'status');
 	} else if ($form_state['values']['status'] == 2) {
 		/* feedback disapprove */
 		db_query("UPDATE {assignment_feedback_submissions} SET status = %d, approver_uid = %d, approver_timestamp = %d, disapprove_message = '%s' WHERE id = %d", 2, $user->uid, time(), $form_state['values']['message'], $feedback_id);
@@ -170,7 +174,7 @@ function manage_feedback_form_submit($form, &$form_state)
 		if (!drupal_mail('assignment_feedback', 'feedback_disapproved', $email_to, language_default(), $param, variable_get('textbook_companion_from_email', NULL), TRUE))
 			drupal_set_message('Error sending email message.', 'error');
 
-		drupal_set_message(t('Feedback has been disapproved and a notification email has been sent to the user.'), 'status');
+		drupal_set_message(t('Feedback No. ' . $feedback_id . ' has been disapproved and a notification email has been sent to the user.'), 'status');
 	}
 
 	drupal_goto('feedback/manage');
@@ -194,6 +198,54 @@ function edit_feedback_form($form_state)
 	}
 	$user_data = user_load($feedback_data->uid);
 	$node_data = node_load($feedback_data->nid);
+
+  /* add javascript for automatic book title, check if example uploaded, dependency selection effects */
+  $assignment_js = " $(document).ready(function() {
+  	var curWhere;
+    $('#edit-feedback-type').change(function() {
+    	var curType = $('#edit-feedback-type').val();
+      if (curType == '1') {
+      		$('#edit-completion-time-wrapper').show();
+      	} else {
+      		$('#edit-completion-time-wrapper').hide();
+      	}
+    });
+
+    $('#edit-feedback-where-1').change(function() {
+    	curWhere = $('#edit-feedback-where-1').val();
+      if (curWhere == '1') {
+      	$('#edit-timing-wrapper').hide();
+      }
+    });
+    $('#edit-feedback-where-2').change(function() {
+    	curWhere = $('#edit-feedback-where-2').val();
+      if (curWhere == '2') {
+      	$('#edit-timing-wrapper').show();
+      }
+    });
+    $('#edit-feedback-where-3').change(function() {
+    	curWhere = $('#edit-feedback-where-3').val();
+      if (curWhere == '3') {
+      	$('#edit-timing-wrapper').show();
+      }
+    });
+
+		curWhere = $('#edit-feedback-where-1:checked').val();
+		if (curWhere == '1') {
+			$('#edit-timing-wrapper').hide();
+		}
+		curWhere = $('#edit-feedback-where-2:checked').val();
+		if (curWhere == '2') {
+			$('#edit-timing-wrapper').show();
+		}
+		curWhere = $('#edit-feedback-where-3:checked').val();
+		if (curWhere == '3') {
+			$('#edit-timing-wrapper').show();
+		}
+
+    $('#edit-feedback-type').trigger('change');
+  });";
+  drupal_add_js($assignment_js, 'inline', 'header');
 
   $form['name'] = array(
     '#type' => 'textfield',
@@ -234,7 +286,6 @@ function edit_feedback_form($form_state)
     '#size' => 5,
     '#maxlength' => 5,
     '#default_value' => $feedback_data->timing,
-    '#required' => TRUE,
   );
 
   $form['completion_time'] = array(
@@ -244,7 +295,6 @@ function edit_feedback_form($form_state)
     '#maxlength' => 2,
     '#field_suffix' => 'minutes',
     '#default_value' => $feedback_data->completion_time,
-    '#required' => TRUE,
   );
 
   $form['comments'] = array(
@@ -352,17 +402,28 @@ function edit_feedback_form_submit($form, &$form_state)
 		return;
 	}
 
+	$timing = $form_state['values']['timing'];
+	$completion_time = $form_state['values']['completion_time'];
+
+	if ($form_state['values']['feedback_where'] == 1) {
+		$timing = "00:00";
+	}
+
+	if ($form_state['values']['feedback_type'] != 1) {
+		$completion_time = 0;
+	}
+
 	/* update feedback */
 	db_query("UPDATE {assignment_feedback_submissions} SET feedback_type = %d, feedback_where = %d, timing = '%s', completion_time = %d, comments = '%s' WHERE id = %d",
 						$form_state['values']['feedback_type'],
 						$form_state['values']['feedback_where'],
-						$form_state['values']['timing'],
-						$form_state['values']['completion_time'],
+						$timing,
+						$completion_time,
 						$form_state['values']['comments'],
 						$feedback_id
 						);
 
-	drupal_set_message(t('Feedback has been updated!'), 'status');
+	drupal_set_message(t('Feedback No. ' . $feedback_id . ' has been updated!'), 'status');
 	drupal_goto('feedback/manage');
 	return;
 }
@@ -381,13 +442,15 @@ function _pending_feedbacks()
 	$pending_rows = array();
 	while ($pending_data = db_fetch_object($pending_q)) {
 		$pending_rows[] = array(
+				$pending_data->id,
 				date('d-m-Y', $pending_data->timestamp),
 				l(node_load($pending_data->nid)->title, 'node/' . $pending_data->nid),
 				l(user_load($pending_data->uid)->name, 'user/' . $pending_data->uid),
+				_feedback_type($pending_data->feedback_type),
 				l('Approve', 'feedback/manage/approve/' . $pending_data->id) . ' | ' . l('Edit', 'feedback/manage/edit/' . $pending_data->id)
 			);
 	}
-  $pending_header = array('Date of Submission', 'Name of the Tutorial', 'User Name', 'Action');
+  $pending_header = array('Id', 'Date of Submission', 'Name of the Tutorial', 'User Name', 'Type', 'Action');
   $output = theme_table($pending_header, $pending_rows);
   return $output; 
 }
@@ -474,6 +537,7 @@ function all_feedbacks_form($form_state)
   	$output = '';
   	while ($search_data = db_fetch_object($search_q)) {
   		$search_rows[] = array(
+				$search_data->id,
 				date('d-m-Y G:i', $search_data->timestamp),
 				l(node_load($search_data->nid)->title, 'node/' . $search_data->nid),
 				l(user_load($search_data->uid)->name, 'user/' . $search_data->uid),
@@ -482,7 +546,7 @@ function all_feedbacks_form($form_state)
 				_feedback_status($search_data->status),
 				l('Approve', 'feedback/manage/approve/' . $search_data->id) . ' | ' . l('Edit', 'feedback/manage/edit/' . $search_data->id)
 			);
-			$search_header = array('Date of Submission', 'Name of the Tutorial', 'User Name', 'Approver', 'Type', 'Status', 'Action');
+			$search_header = array('Id', 'Date of Submission', 'Name of the Tutorial', 'User Name', 'Approver', 'Type', 'Status', 'Action');
 			$output = theme_table($search_header, $search_rows);
   	}
 		$form['results'] = array(
