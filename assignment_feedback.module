@@ -101,7 +101,7 @@ function assignment_feedback_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL)
 	switch ($op) {
 		case 'view':
 			if (in_array($node->type, variable_get('assignment_feedback_node_types', array()))) {
-				$node->feedback_link = l('Submit Your Feedback', 'feedback/add/' . $node->nid);
+				$node->feedback_link = l('Submit Your Feedback', 'feedback/add/' . $node->nid, array('attributes' => array('style' => 'color:#15317E;')));
 			}
 			break;
   }
