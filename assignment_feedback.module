@@ -19,6 +19,17 @@ function assignment_feedback_menu()
     'file' => 'feedback.inc',
   );
 
+  /* add feedback */
+  $items['feedback/show'] = array(
+    'title' => 'Archived Assignment Feedback',
+    'description' => 'Archived Assignment Feedback',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('show_feedback_form'),
+    'access arguments' => array('view assignment feedback'),
+    'type' => MENU_CALLBACK,
+    'file' => 'show_feedback.inc',
+  );
+
   /* manage feedback */
   $items['feedback/manage'] = array(
     'title' => 'Manage Feedback',
@@ -90,7 +101,7 @@ function assignment_feedback_menu()
  * Implementation of hook_perm().
  */
 function assignment_feedback_perm() {
-  return array('administer assignment feedback', 'create assignment feedback', 'manage assignment feedback');
+  return array('create assignment feedback', 'view assignment feedback', 'manage assignment feedback', 'administer assignment feedback');
 }
 
 /**
@@ -101,7 +112,9 @@ function assignment_feedback_nodeapi(&$node, $op, $a3 = NULL, $a4 = NULL)
 	switch ($op) {
 		case 'view':
 			if (in_array($node->type, variable_get('assignment_feedback_node_types', array()))) {
-				$node->feedback_link = l('Submit Your Feedback', 'feedback/add/' . $node->nid, array('attributes' => array('style' => 'color:#15317E;')));
+				$node->feedback_link = l('Submit Your Feedback', 'feedback/add/' . $node->nid, array('attributes' => array('style' => 'color:#0000FF;')));
+				$node->feedback_link .= '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'; 
+				$node->feedback_link .= l('Archived Feedback', 'feedback/show/' . $node->nid, array('attributes' => array('style' => 'color:#0000FF;')));
 			}
 			break;
   }
